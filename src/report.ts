@@ -46,9 +46,10 @@ function bar(score: number, width = 24): string {
 export function formatText(analysis: Analysis, color: boolean): string {
   const lines: string[] = []
   const c = (col: string, t: string) => colorize(color, col, t)
+  const mode = analysis.ai ? 'heuristic + AI review' : 'local PR risk scan'
 
   lines.push('')
-  lines.push(c(COLORS.bold, 'diffguard') + c(COLORS.dim, ' · local PR risk scan'))
+  lines.push(c(COLORS.bold, 'diffguard') + c(COLORS.dim, ` · ${mode}`))
   lines.push(
     c(COLORS.dim, `${analysis.base}...${analysis.head}`) +
       ` · ${analysis.files.length} file(s)`,
@@ -63,15 +64,34 @@ export function formatText(analysis: Analysis, color: boolean): string {
   lines.push(c(COLORS.dim, analysis.summary))
   lines.push('')
 
+  if (analysis.ai) {
+    lines.push(
+      c(COLORS.cyan, 'AI') +
+        c(
+          COLORS.dim,
+          ` · ${analysis.ai.provider}/${analysis.ai.model} · delta ${analysis.ai.riskDelta >= 0 ? '+' : ''}${analysis.ai.riskDelta}`,
+        ),
+    )
+    lines.push(`         ${analysis.ai.summary}`)
+    if (analysis.ai.questions.length) {
+      lines.push(c(COLORS.dim, '         Questions:'))
+      for (const q of analysis.ai.questions.slice(0, 6)) {
+        lines.push(c(COLORS.dim, `         ? ${q}`))
+      }
+    }
+    lines.push('')
+  }
+
   if (!analysis.findings.length) {
-    lines.push(c(COLORS.green, '✓ No heuristic findings'))
+    lines.push(c(COLORS.green, '✓ No findings'))
     lines.push('')
     return lines.join('\n')
   }
 
   for (const f of analysis.findings) {
     const tag = c(severityColor(f.severity), f.severity.toUpperCase().padEnd(8))
-    lines.push(`${tag} ${c(COLORS.bold, f.title)} ${c(COLORS.dim, `(+${f.score})`)}`)
+    const src = f.source === 'ai' ? c(COLORS.cyan, ' ai') : ''
+    lines.push(`${tag} ${c(COLORS.bold, f.title)}${src} ${c(COLORS.dim, `(+${f.score})`)}`)
     lines.push(`         ${f.detail}`)
     if (f.files.length) {
       const shown = f.files.slice(0, 6)
@@ -83,7 +103,12 @@ export function formatText(analysis: Analysis, color: boolean): string {
     lines.push('')
   }
 
-  lines.push(c(COLORS.dim, 'Tip: re-run with --json for CI, or --fail-on high to gate merges.'))
+  lines.push(
+    c(
+      COLORS.dim,
+      'Tip: --ai for LLM review · --ai-prompt for Cursor/Claude · --fail-on high for CI gates.',
+    ),
+  )
   lines.push('')
   return lines.join('\n')
 }
@@ -98,6 +123,16 @@ export function formatJson(analysis: Analysis): string {
       summary: analysis.summary,
       fileCount: analysis.files.length,
       findings: analysis.findings,
+      ai: analysis.ai
+        ? {
+            provider: analysis.ai.provider,
+            model: analysis.ai.model,
+            baseUrl: analysis.ai.baseUrl,
+            summary: analysis.ai.summary,
+            questions: analysis.ai.questions,
+            riskDelta: analysis.ai.riskDelta,
+          }
+        : undefined,
       files: analysis.files.map(({ path, status, additions, deletions }) => ({
         path,
         status,

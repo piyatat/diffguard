@@ -7,6 +7,7 @@ export type Finding = {
   detail: string
   files: string[]
   score: number
+  source?: 'heuristic' | 'ai'
 }
 
 export type FileChange = {
@@ -17,6 +18,16 @@ export type FileChange = {
   patch?: string
 }
 
+export type AiReview = {
+  provider: 'ollama' | 'openai'
+  model: string
+  baseUrl: string
+  summary: string
+  questions: string[]
+  riskDelta: number
+  raw?: string
+}
+
 export type Analysis = {
   base: string
   head: string
@@ -25,6 +36,7 @@ export type Analysis = {
   score: number
   grade: 'A' | 'B' | 'C' | 'D' | 'F'
   summary: string
+  ai?: AiReview
 }
 
 export const SEVERITY_WEIGHT: Record<Severity, number> = {

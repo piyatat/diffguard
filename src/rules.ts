@@ -256,6 +256,7 @@ export function runRules(files: FileChange[]): Finding[] {
       detail: result.detail,
       files: result.files,
       score,
+      source: 'heuristic',
     })
   }
   return findings.sort((a, b) => b.score - a.score)

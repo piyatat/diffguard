@@ -1,7 +1,7 @@
 {
   "name": "diffguard",
-  "version": "1.0.0",
-  "description": "Local-first PR risk scanner for git diffs — hotspots, missing tests, secret patterns, no cloud.",
+  "version": "1.1.0",
+  "description": "Local-first PR risk scanner with optional Ollama / OpenAI-compatible AI review.",
   "type": "module",
   "bin": {
     "diffguard": "./bin/diffguard.js"

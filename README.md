@@ -1,6 +1,6 @@
 # Diffguard
 
-Local-first **PR risk scanner** for software engineers. Point it at a git repo, get a risk grade before you open (or merge) a pull request — no cloud, no API keys, nothing leaves your machine.
+Local-first **PR risk scanner** for software engineers. Point it at a git repo, get a risk grade before you open (or merge) a pull request. Optional AI enrichment talks to a **local LLM** (Ollama / LM Studio) or any **OpenAI-compatible** endpoint.
 
 ![license](https://img.shields.io/badge/license-MIT-2f6f6a?style=flat-square)
 ![node](https://img.shields.io/badge/node-%3E%3D18-b86a3c?style=flat-square)
@@ -15,6 +15,7 @@ Code review time is expensive. Diffguard runs cheap heuristics on `git diff` so 
 - Secret-shaped strings in **added** lines (values never printed)
 - Common safety bypasses (`CORS *`, `eslint-disable`, TLS verify off, …)
 - Lockfile churn without a manifest change
+- Optional LLM / agent second pass for narrative review and extra findings
 
 ## Quick start
 
@@ -34,26 +35,71 @@ diffguard --base origin/main --fail-on high
 diffguard --json > report.json
 ```
 
+## AI review (optional)
+
+Heuristics always run. Add `--ai` when you want a model to confirm, refute, or extend findings.
+
+### Local LLM (Ollama — default)
+
+```bash
+# Install + pull a model first: https://ollama.com
+ollama pull llama3.2
+diffguard --ai
+diffguard --ai --ai-model llama3.1:8b
+```
+
+### LM Studio / any OpenAI-compatible local server
+
+```bash
+diffguard --ai \
+  --ai-provider openai \
+  --ai-base-url http://127.0.0.1:1234/v1 \
+  --ai-model local-model
+```
+
+Local OpenAI-compatible servers usually do not need a key. If yours does:
+
+```bash
+export DIFFGUARD_AI_API_KEY="your-local-key"   # do not commit this
+diffguard --ai --ai-provider openai --ai-base-url http://127.0.0.1:1234/v1
+```
+
+### Hosted OpenAI-compatible API
+
+```bash
+export OPENAI_API_KEY="…"   # or DIFFGUARD_AI_API_KEY — never commit keys
+diffguard --ai --ai-provider openai --ai-model gpt-4o-mini
+```
+
+### Cursor / Claude / any agent (no API call)
+
+Export a **redacted** review brief and paste it into your agent:
+
+```bash
+diffguard --ai-prompt > /tmp/diffguard-review.prompt.md
+```
+
+Secret-shaped values are redacted before prompt export or remote calls.
+
 ## Example output
 
 ```text
-diffguard · local PR risk scan
+diffguard · heuristic + AI review
 origin/main...feature/payments · 14 file(s)
 
-Grade C  38/100  [#########...............]
-Risk 38/100 · top issue: high-impact path changes
+Grade C  44/100  [###########.............]
+Auth session change looks correct but migration lacks a down path…
+
+AI · ollama/llama3.2 · delta +6
+         Auth session change looks correct but migration lacks a down path…
+         Questions:
+         ? Is the users.email unique constraint backfilled safely?
 
 CRITICAL Possible secret material in diff (+40)
          Pattern match (values redacted from report): src/config.ts: hardcoded secret assignment
-         · src/config.ts
 
-HIGH     High-impact path changes (+28)
-         src/auth/session.ts (auth / identity); prisma/migrations/20260305/migration.sql (database schema)
-         · src/auth/session.ts
-         · prisma/migrations/20260305/migration.sql
-
-MEDIUM   Source changed without nearby tests (+12)
-         8 source file(s) changed and no test files appear in this diff.
+HIGH     [AI] Missing down migration (+16) ai
+         Forward SQL only — rollbacks in prod will be painful.
 ```
 
 ## CI gate
@@ -63,8 +109,15 @@ Fail the job when high-or-worse findings appear:
 ```yaml
 - name: Diffguard
   run: |
-    npm install -g ./diffguard   # or npx from a published package
-    diffguard --base origin/main --fail-on high --no-color
+    npm install
+    npm run build
+    node bin/diffguard.js --base origin/main --fail-on high --no-color
+```
+
+Optional AI in CI (self-hosted runner + Ollama recommended so diffs stay private):
+
+```yaml
+- run: node bin/diffguard.js --ai --fail-on high --no-color
 ```
 
 Exit codes: `0` ok · `1` failed severity gate · `2` usage / git error.
@@ -79,17 +132,37 @@ Exit codes: `0` ok · `1` failed severity gate · `2` usage / git error.
 | `--fail-on <sev>` | `low` \| `medium` \| `high` \| `critical` |
 | `--unstaged` | Also surface dirty/untracked paths |
 | `--no-color` | Plain text |
+| `--ai` | Call configured LLM after heuristics |
+| `--ai-provider` | `ollama` (default) \| `openai` |
+| `--ai-model` | Model id |
+| `--ai-base-url` | Endpoint base URL |
+| `--ai-prompt` | Print redacted agent prompt only |
 | `-h, --help` | Help |
+
+### Env
+
+| Variable | Purpose |
+| --- | --- |
+| `DIFFGUARD_AI_PROVIDER` | `ollama` \| `openai` |
+| `DIFFGUARD_AI_MODEL` | Model name |
+| `DIFFGUARD_AI_BASE_URL` | Endpoint |
+| `DIFFGUARD_AI_API_KEY` | Key for openai-compatible providers |
+| `OPENAI_API_KEY` | Fallback key |
+| `DIFFGUARD_AI_TIMEOUT_MS` | Request timeout (default `120000`) |
+
+Copy `.env.example` for a local template — never commit real keys.
 
 ## Privacy
 
-- Reads local git only
-- Never uploads diffs
-- Secret findings report **pattern labels + file paths**, not matched secret values
+- Heuristic mode: local git only, no network
+- `--ai` with Ollama / local OpenAI-compatible: diffs stay on your machine
+- `--ai` with a hosted API: **redacted** patch excerpts are sent to that endpoint
+- Secret findings and prompts report labels / redactions values, not raw secrets
+- API keys are read from the environment only and are scrubbed from error text
 
 ## Stack
 
-Node 18+ · TypeScript · `git` CLI
+Node 18+ · TypeScript · `git` CLI · optional Ollama / OpenAI-compatible HTTP
 
 ## License
 
