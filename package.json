@@ -1,0 +1,40 @@
+{
+  "name": "diffguard",
+  "version": "1.0.0",
+  "description": "Local-first PR risk scanner for git diffs — hotspots, missing tests, secret patterns, no cloud.",
+  "type": "module",
+  "bin": {
+    "diffguard": "./bin/diffguard.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node bin/diffguard.js",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "git",
+    "diff",
+    "pr",
+    "risk",
+    "security",
+    "cli",
+    "code-review"
+  ],
+  "author": "Piyatat",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}
