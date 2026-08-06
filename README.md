@@ -4,6 +4,7 @@ Local-first **PR risk scanner** for software engineers. Point it at a git repo, 
 
 ![license](https://img.shields.io/badge/license-MIT-2f6f6a?style=flat-square)
 ![node](https://img.shields.io/badge/node-%3E%3D18-b86a3c?style=flat-square)
+![cli](https://img.shields.io/badge/cli-local%20PR%20scan-4a6fa5?style=flat-square)
 
 ## Why
 
@@ -177,6 +178,42 @@ Copy `.env.example` for a local template — never commit real keys.
 - `--ai` with a hosted API: **redacted** patch excerpts are sent to that endpoint
 - Secret findings and prompts report labels / redactions values, not raw secrets
 - API keys are read from the environment only and are scrubbed from error text
+
+## Compared to
+
+Diffguard is a **local-first PR risk gate**, not a full static-analysis platform:
+
+| Need | Diffguard | Semgrep / CodeQL / etc. |
+| --- | --- | --- |
+| Fast pre-PR foot-gun check | Yes (heuristics on `git diff`) | Heavier setup / CI images |
+| Secret-shaped strings in **added** lines | Yes (values redacted) | Often yes, different rules |
+| Deep taint / custom rule packs | No | Yes |
+| Optional local LLM narrative | `--ai` / `--ai-prompt` | Usually separate tooling |
+
+Use Diffguard before you open a PR; keep Semgrep/CodeQL (or your org scanner) for depth.
+
+## FAQ
+
+**What do exit codes mean?**  
+`0` — scan finished and (if set) the severity gate passed. `1` — `--fail-on` tripped (finding at that severity or worse). `2` — usage error, not a git repo, or invalid `--cwd` (missing path / not a directory).
+
+**Why did CI fail on grade B?**  
+`--fail-on` keys off **finding severity**, not the letter grade. One `high` finding fails `--fail-on high` even if the score still maps to B.
+
+**Clean tree / empty diff?**  
+No findings → grade A / score 0 and exit `0` (unless you pass bad flags). Useful as a no-op on docs-only branches when the base already matches HEAD.
+
+**Does heuristic mode phone home?**  
+No. Heuristics use local `git` only. Network happens only if you opt into `--ai` against a remote endpoint.
+
+
+**What does `--unstaged` do?**  
+Default scan is committed range vs `--base`. Add `--unstaged` when you also want dirty and untracked paths in the working tree surfaced before you commit.
+
+**Where are heuristic categories documented?**  
+See [docs/findings-glossary.md](docs/findings-glossary.md) for human labels (secrets, auth/payments paths, lockfile churn, safety bypasses, missing tests, oversized diffs).
+
+More CI copy-paste recipes: [docs/ci-recipes.md](docs/ci-recipes.md).
 
 ## Stack
 

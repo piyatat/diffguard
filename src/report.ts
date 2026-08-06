@@ -100,6 +100,13 @@ export function formatText(analysis: Analysis, color: boolean): string {
 
   if (!analysis.findings.length) {
     lines.push(c(COLORS.green, '✓ No findings'))
+    if (analysis.files.length === 0) {
+      lines.push(c(COLORS.dim, '  Clean tree vs base — nothing to scan.'))
+      lines.push(c(COLORS.dim, '  Tip: pass --unstaged to include dirty/untracked files.'))
+    } else {
+      lines.push(c(COLORS.dim, `  ${analysis.files.length} file(s) scanned · no heuristic hits.`))
+      lines.push(c(COLORS.dim, '  Tip: add --ai for a narrative second pass, or --fail-on high in CI.'))
+    }
     lines.push('')
     return lines.join('\n')
   }

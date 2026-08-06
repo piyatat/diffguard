@@ -1,5 +1,5 @@
 import type { Analysis, Finding, FileChange, Severity } from './types.js'
-import { SEVERITY_WEIGHT } from './types.js'
+import { SEVERITY_ORDER, SEVERITY_RANK, SEVERITY_WEIGHT } from './types.js'
 import { runRules } from './rules.js'
 
 export function gradeFromScore(score: number): Analysis['grade'] {
@@ -43,9 +43,32 @@ export function analyze(input: {
 }
 
 export function maxSeverity(findings: Finding[]): Severity | null {
-  const order: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
-  for (const s of order) {
+  for (const s of SEVERITY_ORDER) {
     if (findings.some((f) => f.severity === s)) return s
   }
   return null
+}
+
+/** Count findings per severity bucket (includes zeros). */
+export function countFindingsBySeverity(findings: Finding[]): Record<Severity, number> {
+  const counts: Record<Severity, number> = {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
+  }
+  for (const f of findings) {
+    counts[f.severity] += 1
+  }
+  return counts
+}
+
+/** Highest severity first, then score descending. */
+export function sortFindingsBySeverity(findings: Finding[]): Finding[] {
+  return findings.slice().sort((a, b) => {
+    const bySev = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity]
+    if (bySev !== 0) return bySev
+    return b.score - a.score
+  })
 }

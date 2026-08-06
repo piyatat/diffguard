@@ -3,6 +3,9 @@ dist
 .DS_Store
 .fixture
 *.local
+*.log
+*.tsbuildinfo
+coverage
 .env
 .env.*
 !.env.example

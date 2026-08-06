@@ -118,6 +118,26 @@ function rules(): Rule[] {
       },
     },
     {
+      id: 'mega-file-churn',
+      severity: 'medium',
+      title: 'Single-file mega churn',
+      score: 12,
+      test(files) {
+        const heavy = files
+          .filter((f) => f.additions + f.deletions >= 800)
+          .sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions))
+        if (!heavy.length) return { hit: false, files: [], detail: '' }
+        return {
+          hit: true,
+          files: heavy.slice(0, 6).map((f) => f.path),
+          detail: heavy
+            .slice(0, 6)
+            .map((f) => `${f.path} (+${f.additions}/−${f.deletions})`)
+            .join('; '),
+        }
+      },
+    },
+    {
       id: 'lockfile-only-skew',
       severity: 'low',
       title: 'Lockfile changed without manifest',

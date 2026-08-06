@@ -46,3 +46,27 @@ export const SEVERITY_WEIGHT: Record<Severity, number> = {
   high: 22,
   critical: 40,
 }
+
+/** Highest → lowest severity (for gates and summaries). */
+export const SEVERITY_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
+
+export const SEVERITY_RANK: Record<Severity, number> = {
+  info: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+}
+
+/** Parse a severity string; returns null when invalid. */
+export function parseSeverity(raw: string | undefined | null): Severity | null {
+  if (raw == null) return null
+  const v = raw.trim().toLowerCase()
+  if (v in SEVERITY_RANK) return v as Severity
+  return null
+}
+
+/** True when `finding` is at least as severe as `threshold`. */
+export function severityAtLeast(finding: Severity, threshold: Severity): boolean {
+  return SEVERITY_RANK[finding] >= SEVERITY_RANK[threshold]
+}

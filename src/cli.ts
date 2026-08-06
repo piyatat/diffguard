@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { enrichWithAi, exportAgentPrompt } from './ai/review.js'
 import { analyze, maxSeverity } from './analyze.js'
@@ -27,8 +27,31 @@ type Args = {
 
 function packageVersion(): string {
   const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json')
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version: string }
-  return pkg.version
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version?: string }
+    if (typeof pkg.version === 'string' && pkg.version.trim()) return pkg.version.trim()
+  } catch {
+    // missing/unreadable package.json — fall through
+  }
+  return '0.0.0'
+}
+
+function assertCwd(cwd: string): string {
+  const resolved = resolve(cwd)
+  if (!existsSync(resolved)) {
+    throw new Error(`Path not found: ${resolved}`)
+  }
+  try {
+    if (!statSync(resolved).isDirectory()) {
+      throw new Error(`Not a directory: ${resolved}`)
+    }
+  } catch (err) {
+    if (err instanceof Error && (err.message.startsWith('Not a directory') || err.message.startsWith('Path not found'))) {
+      throw err
+    }
+    throw new Error(`Cannot access path: ${resolved}`)
+  }
+  return resolved
 }
 
 const SEV_RANK: Record<Severity, number> = {
@@ -66,12 +89,24 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--unstaged') args.unstaged = true
     else if (a === '--ai') args.ai = true
     else if (a === '--ai-prompt') args.aiPrompt = true
-    else if (a === '--base' || a === '-b') args.base = argv[++i]
-    else if (a === '--cwd') args.cwd = argv[++i] ?? args.cwd
+    else if (a === '--base' || a === '-b') {
+      const v = argv[++i]
+      if (v === undefined || !String(v).trim()) {
+        throw new Error('Missing --base value. Pass a git ref (e.g. origin/main).\nTry: diffguard --help')
+      }
+      args.base = String(v).trim()
+    }
+    else if (a === '--cwd') {
+      const v = argv[++i]
+      if (v === undefined || !String(v).trim()) {
+        throw new Error('Missing --cwd value.\nTry: diffguard --help')
+      }
+      args.cwd = String(v).trim()
+    }
     else if (a === '--ai-provider') {
       const v = (argv[++i] ?? '').toLowerCase()
       if (v !== 'ollama' && v !== 'openai') {
-        throw new Error(`Invalid --ai-provider value: ${v || '(empty)'}. Use ollama|openai.`)
+        throw new Error(`Invalid --ai-provider value: ${v || '(empty)'}. Use ollama|openai.\nTry: diffguard --help`)
       }
       args.aiProvider = v
     }
@@ -80,11 +115,11 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--fail-on') {
       const v = (argv[++i] ?? '').toLowerCase() as Severity
       if (!(v in SEV_RANK)) {
-        throw new Error(`Invalid --fail-on value: ${v}. Use low|medium|high|critical.`)
+        throw new Error(`Invalid --fail-on value: ${v}. Use low|medium|high|critical.\nTry: diffguard --help`)
       }
       args.failOn = v
     } else if (a.startsWith('-')) {
-      throw new Error(`Unknown flag: ${a}`)
+      throw new Error(`Unknown flag: ${a}\nTry: diffguard --help`)
     }
   }
   return args
@@ -92,16 +127,19 @@ function parseArgs(argv: string[]): Args {
 
 function helpText(): string {
   return `
-diffguard — local-first PR risk scanner
+diffguard ${packageVersion()} — local-first PR risk scanner
 
 Usage:
   diffguard [options]
 
 Options:
   -b, --base <ref>        Diff base (default: origin/main, then main/master)
-      --cwd <path>        Repository path (default: cwd)
-      --json              Machine-readable output
-      --fail-on <sev>     Exit 1 if any finding >= severity (low|medium|high|critical)
+                          Empty values are rejected (exit 2)
+      --cwd <path>        Repository path (default: cwd; empty rejected)
+      --json              Machine-readable output (CI / scripts)
+      --fail-on <sev>     Exit 1 if any finding >= severity
+                          Values: low | medium | high | critical
+                          Order: info < low < medium < high < critical
       --unstaged          Also list untracked/unstaged dirty files
       --color             Force ANSI colors (overrides NO_COLOR)
       --no-color          Disable ANSI colors
@@ -109,9 +147,9 @@ Options:
       --ai-provider <p>   ollama (default) | openai
       --ai-model <name>   Model id (default: llama3.2 / gpt-4o-mini)
       --ai-base-url <url> Override endpoint (Ollama, LM Studio, OpenAI, …)
-      --ai-prompt         Print a redacted agent prompt (no API call) for Cursor/Claude/etc.
+      --ai-prompt         Print a redacted agent prompt (no API call)
   -V, --version           Print version and exit
-  -h, --help              Show help
+  -h, --help              Show this help
 
 Env (optional):
   NO_COLOR                Disable ANSI colors when set
@@ -123,17 +161,32 @@ Env (optional):
   DIFFGUARD_AI_TIMEOUT_MS Request timeout in ms (default 120000)
 
 Exit codes:
-  0  ok
+  0  ok (including clean diffs with no findings)
   1  failed --fail-on severity gate
-  2  usage / git error
+  2  usage / git error (missing flags, not a repo, bad refs)
 
 Examples:
+  # Quick scan of this checkout
   diffguard
-  diffguard --ai                          # local Ollama
-  diffguard --ai --ai-provider openai
-  diffguard --ai --ai-base-url http://127.0.0.1:1234/v1 --ai-provider openai --ai-model local-model
+
+  # CI gate against origin/main
+  diffguard --base origin/main --fail-on high --no-color
+
+  # JSON for pipelines
+  diffguard --json > report.json
+
+  # Local Ollama second pass
+  diffguard --ai
+
+  # LM Studio / OpenAI-compatible local server
+  diffguard --ai --ai-provider openai \\
+    --ai-base-url http://127.0.0.1:1234/v1 --ai-model local-model
+
+  # Redacted brief for Cursor / Claude (no API call)
   diffguard --ai-prompt > review.prompt.md
-  diffguard --base origin/main --fail-on high
+
+  # Scan another checkout
+  diffguard --cwd ~/code/other-repo --fail-on medium
 `.trim()
 }
 
@@ -162,8 +215,20 @@ async function main(): Promise<void> {
     return
   }
 
+  try {
+    args.cwd = assertCwd(args.cwd)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err)
+    process.exitCode = 2
+    return
+  }
+
   if (!isGitRepo(args.cwd)) {
-    console.error('Not a git repository. Run inside a repo or pass --cwd.')
+    console.error(
+      'Not a git repository.\n' +
+        'Run inside a checkout, or pass --cwd /path/to/repo.\n' +
+        'Try: diffguard --help',
+    )
     process.exitCode = 2
     return
   }
