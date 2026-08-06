@@ -22,10 +22,11 @@ Code review time is expensive. Diffguard runs cheap heuristics on `git diff` so 
 ```bash
 npm install
 npm run build
-node bin/diffguard.js --cwd /path/to/repo
+npm start                 # scan this checkout (HEAD vs default base)
+# or: node bin/diffguard.js
 ```
 
-Or link it globally from this checkout:
+Link globally from this checkout to scan other repos:
 
 ```bash
 npm link
@@ -102,6 +103,20 @@ HIGH     [AI] Missing down migration (+16) ai
          Forward SQL only — rollbacks in prod will be painful.
 ```
 
+## Interpreting results
+
+The **score** is cumulative risk points from findings (and optional AI `risk_delta`): **0** is clean, **100** is maximum risk. Letter grades map as:
+
+| Grade | Score |
+| --- | --- |
+| A | &lt; 10 |
+| B | &lt; 25 |
+| C | &lt; 45 |
+| D | &lt; 70 |
+| F | ≥ 70 |
+
+`--fail-on` gates on **finding severity** (`low` … `critical`), not the letter grade. A diff can be grade B with a single `high` finding and still fail `--fail-on high`.
+
 ## CI gate
 
 Fail the job when high-or-worse findings appear:
@@ -131,18 +146,21 @@ Exit codes: `0` ok · `1` failed severity gate · `2` usage / git error.
 | `--json` | JSON report for tooling |
 | `--fail-on <sev>` | `low` \| `medium` \| `high` \| `critical` |
 | `--unstaged` | Also surface dirty/untracked paths |
+| `--color` | Force ANSI colors (overrides `NO_COLOR`) |
 | `--no-color` | Plain text |
 | `--ai` | Call configured LLM after heuristics |
 | `--ai-provider` | `ollama` (default) \| `openai` |
 | `--ai-model` | Model id |
 | `--ai-base-url` | Endpoint base URL |
 | `--ai-prompt` | Print redacted agent prompt only |
+| `-V, --version` | Print version and exit |
 | `-h, --help` | Help |
 
 ### Env
 
 | Variable | Purpose |
 | --- | --- |
+| `NO_COLOR` | Disable ANSI colors when set |
 | `DIFFGUARD_AI_PROVIDER` | `ollama` \| `openai` |
 | `DIFFGUARD_AI_MODEL` | Model name |
 | `DIFFGUARD_AI_BASE_URL` | Endpoint |

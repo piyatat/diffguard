@@ -1,4 +1,13 @@
 import { execFileSync } from 'node:child_process'
+import { sanitizeErrorMessage } from './ai/redact.js'
+
+function execErrorDetail(err: unknown): string {
+  const e = err as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string }
+  const stderr = typeof e.stderr === 'string' ? e.stderr : e.stderr?.toString('utf8') ?? ''
+  const stdout = typeof e.stdout === 'string' ? e.stdout : e.stdout?.toString('utf8') ?? ''
+  const detail = (stderr || stdout || e.message || String(err)).trim()
+  return sanitizeErrorMessage(detail)
+}
 
 export function git(args: string[], cwd: string): string {
   try {
@@ -9,8 +18,7 @@ export function git(args: string[], cwd: string): string {
       maxBuffer: 32 * 1024 * 1024,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    throw new Error(`git ${args.join(' ')} failed: ${message}`)
+    throw new Error(`git ${args.join(' ')} failed: ${execErrorDetail(err)}`)
   }
 }
 
@@ -24,7 +32,16 @@ export function isGitRepo(cwd: string): boolean {
 }
 
 export function resolveBase(cwd: string, requested?: string): string {
-  if (requested) return requested
+  if (requested) {
+    try {
+      git(['rev-parse', '--verify', requested], cwd)
+      return requested
+    } catch {
+      throw new Error(
+        `Unknown base ref: ${requested}. Pass a valid --base <ref> (e.g. origin/main, main, HEAD~1).`,
+      )
+    }
+  }
 
   for (const candidate of ['origin/main', 'origin/master', 'main', 'master']) {
     try {

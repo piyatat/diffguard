@@ -1,26 +1,8 @@
+import { gradeFromScore, scoreFromFindings } from '../analyze.js'
 import type { Analysis } from '../types.js'
-import { SEVERITY_WEIGHT } from '../types.js'
-import { chatCompletion, resolveAiConfig, type AiConfig } from './client.js'
+import { chatCompletion, resolveAiConfig } from './client.js'
 import { buildAiPrompt, findingsFromAi } from './prompt.js'
-import { sanitizeErrorMessage } from './redact.js'
-
-export type AiReviewResult = {
-  provider: AiConfig['provider']
-  model: string
-  baseUrl: string
-  summary: string
-  questions: string[]
-  riskDelta: number
-  raw?: string
-}
-
-function gradeFromScore(score: number): Analysis['grade'] {
-  if (score < 10) return 'A'
-  if (score < 25) return 'B'
-  if (score < 45) return 'C'
-  if (score < 70) return 'D'
-  return 'F'
-}
+import { redactSecrets, sanitizeErrorMessage } from './redact.js'
 
 function extractJson(text: string): unknown {
   const trimmed = text.trim()
@@ -81,16 +63,13 @@ export async function enrichWithAi(
         summary: `AI review parse error: ${message}`,
         questions: [],
         riskDelta: 0,
-        raw: content.slice(0, 2000),
+        raw: redactSecrets(content).slice(0, 2000),
       },
     }
   }
 
   const findings = [...analysis.findings, ...parsed.findings].sort((a, b) => b.score - a.score)
-  const raw =
-    findings.reduce((n, f) => n + f.score + SEVERITY_WEIGHT[f.severity] * 0.15, 0) +
-    parsed.riskDelta
-  const score = Math.min(100, Math.max(0, Math.round(raw)))
+  const score = scoreFromFindings(findings, parsed.riskDelta)
 
   return {
     ...analysis,

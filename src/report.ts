@@ -43,6 +43,20 @@ function bar(score: number, width = 24): string {
   return `[${'#'.repeat(filled)}${'.'.repeat(width - filled)}]`
 }
 
+const SEVERITY_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
+
+function severityTally(findings: Analysis['findings']): string | null {
+  if (!findings.length) return null
+  const counts: Partial<Record<Severity, number>> = {}
+  for (const f of findings) {
+    counts[f.severity] = (counts[f.severity] ?? 0) + 1
+  }
+  const parts = SEVERITY_ORDER.filter((sev) => (counts[sev] ?? 0) > 0).map(
+    (sev) => `${counts[sev]} ${sev}`,
+  )
+  return parts.length ? parts.join(' · ') : null
+}
+
 export function formatText(analysis: Analysis, color: boolean): string {
   const lines: string[] = []
   const c = (col: string, t: string) => colorize(color, col, t)
@@ -61,6 +75,8 @@ export function formatText(analysis: Analysis, color: boolean): string {
   lines.push(
     `${gradeLabel}  ${c(COLORS.bold, `${analysis.score}/100`)}  ${bar(analysis.score)}`,
   )
+  const tally = severityTally(analysis.findings)
+  if (tally) lines.push(c(COLORS.dim, tally))
   lines.push(c(COLORS.dim, analysis.summary))
   lines.push('')
 

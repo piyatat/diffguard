@@ -95,7 +95,8 @@ export function findingsFromAi(raw: unknown): {
       if (!item || typeof item !== 'object') continue
       const f = item as Record<string, unknown>
       const severity = normalizeSeverity(f.severity)
-      const title = typeof f.title === 'string' ? f.title.trim() : ''
+      const title =
+        typeof f.title === 'string' ? redactSecrets(f.title.trim()) : ''
       const detail = typeof f.detail === 'string' ? redactSecrets(f.detail.trim()) : ''
       if (!title || !detail) continue
       const files = Array.isArray(f.files)

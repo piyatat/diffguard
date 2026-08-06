@@ -2,12 +2,19 @@ import type { Analysis, Finding, FileChange, Severity } from './types.js'
 import { SEVERITY_WEIGHT } from './types.js'
 import { runRules } from './rules.js'
 
-function gradeFromScore(score: number): Analysis['grade'] {
+export function gradeFromScore(score: number): Analysis['grade'] {
   if (score < 10) return 'A'
   if (score < 25) return 'B'
   if (score < 45) return 'C'
   if (score < 70) return 'D'
   return 'F'
+}
+
+/** Cumulative risk points from findings, optionally plus an AI risk_delta. */
+export function scoreFromFindings(findings: Finding[], riskDelta = 0): number {
+  const raw =
+    findings.reduce((n, f) => n + f.score + SEVERITY_WEIGHT[f.severity] * 0.15, 0) + riskDelta
+  return Math.min(100, Math.max(0, Math.round(raw)))
 }
 
 function summarize(score: number, findings: Finding[], files: FileChange[]): string {
@@ -23,8 +30,7 @@ export function analyze(input: {
   files: FileChange[]
 }): Analysis {
   const findings = runRules(input.files)
-  const raw = findings.reduce((n, f) => n + f.score + SEVERITY_WEIGHT[f.severity] * 0.15, 0)
-  const score = Math.min(100, Math.round(raw))
+  const score = scoreFromFindings(findings)
   return {
     base: input.base,
     head: input.head,

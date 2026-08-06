@@ -25,7 +25,10 @@ export function resolveAiConfig(
     'ollama'
   ).toLowerCase()
 
-  const provider: AiProvider = providerRaw === 'openai' ? 'openai' : 'ollama'
+  if (providerRaw !== 'ollama' && providerRaw !== 'openai') {
+    throw new Error(`Unknown AI provider: ${providerRaw}. Use ollama or openai.`)
+  }
+  const provider: AiProvider = providerRaw
 
   const defaultBase =
     provider === 'ollama' ? 'http://127.0.0.1:11434' : 'https://api.openai.com/v1'
@@ -94,23 +97,38 @@ async function ollamaChat(config: AiConfig, prompt: string): Promise<string> {
   return content
 }
 
+function isLoopbackBaseUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1'
+  } catch {
+    return false
+  }
+}
+
 async function openaiChat(config: AiConfig, prompt: string): Promise<string> {
-  if (!config.apiKey) {
+  // Local OpenAI-compatible servers (LM Studio, etc.) often need no key.
+  // Hosted endpoints still require one so we never send unauthenticated remote calls by accident.
+  if (!config.apiKey && !isLoopbackBaseUrl(config.baseUrl)) {
     throw new Error(
       'OpenAI-compatible provider requires DIFFGUARD_AI_API_KEY or OPENAI_API_KEY (never commit keys).',
     )
   }
 
   const url = `${config.baseUrl}/chat/completions`
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  }
+  if (config.apiKey) {
+    headers.Authorization = `Bearer ${config.apiKey}`
+  }
+
   const res = await fetchWithTimeout(
     url,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         model: config.model,
         temperature: 0.1,

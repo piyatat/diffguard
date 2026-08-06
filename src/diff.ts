@@ -15,6 +15,21 @@ function parseNumstat(line: string): { additions: number; deletions: number; pat
   return { additions, deletions, path }
 }
 
+/** Parse `git diff --name-status` lines (tab-separated; renames may include a score). */
+function parseNameStatus(line: string): { status: FileChange['status']; path: string } | null {
+  const match = line.match(/^([AMDCRT?])(\d*)\t(.+)$/)
+  if (!match) return null
+  const status = match[1] as FileChange['status']
+  const rest = match[3]!
+  // Rename/copy: <score>\told\tnew  — path is the final tab field (may contain spaces).
+  if (status === 'R' || status === 'C') {
+    const tab = rest.lastIndexOf('\t')
+    const path = tab >= 0 ? rest.slice(tab + 1) : rest
+    return { status, path }
+  }
+  return { status, path: rest }
+}
+
 export function collectChanges(
   cwd: string,
   requestedBase: string,
@@ -59,17 +74,12 @@ export function collectChanges(
 
   const files: FileChange[] = []
   for (const line of nameStatus) {
-    const status = line[0] as FileChange['status']
-    const rest = line.slice(1).trim()
-    let path = rest
-    if (status === 'R' || status === 'C') {
-      const parts = rest.split(/\s+/)
-      path = parts[parts.length - 1]!
-    }
-    const s = stats.get(path) ?? { additions: 0, deletions: 0 }
+    const parsed = parseNameStatus(line)
+    if (!parsed) continue
+    const s = stats.get(parsed.path) ?? { additions: 0, deletions: 0 }
     files.push({
-      path,
-      status,
+      path: parsed.path,
+      status: parsed.status,
       additions: s.additions,
       deletions: s.deletions,
     })
