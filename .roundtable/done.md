@@ -12,3 +12,8 @@
 
 ## Deferred
 conflict-markers, `--exclude`, debug-leftovers, severity SSOT, finding-line rule ids, sibling Compared-to table.
+
+## diffguard — --list-rules catalog
+- Exported listRules() + CLI --list-rules / --json
+- Glossary aligned with rule ids
+- Build green
