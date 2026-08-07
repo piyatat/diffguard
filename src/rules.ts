@@ -303,6 +303,32 @@ function rules(): Rule[] {
       },
     },
     {
+      id: 'ts-suppressions',
+      severity: 'medium',
+      title: 'TypeScript suppressions in diff',
+      score: 8,
+      test(files) {
+        const hits: string[] = []
+        const cue = /@ts-(ignore|expect-error|nocheck)\b/
+        for (const f of files) {
+          if (!/\.(ts|tsx|mts|cts)$/i.test(f.path)) continue
+          if (!f.patch) continue
+          const added = f.patch
+            .split('\n')
+            .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+            .join('\n')
+          if (cue.test(added)) hits.push(f.path)
+        }
+        if (!hits.length) return { hit: false, files: [], detail: '' }
+        return {
+          hit: true,
+          files: hits,
+          detail:
+            'Added lines introduce @ts-ignore / @ts-expect-error / @ts-nocheck — type safety bypassed.',
+        }
+      },
+    },
+    {
       id: 'config-bypass',
       severity: 'high',
       title: 'Security config relaxed',

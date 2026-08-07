@@ -18,6 +18,7 @@ Code review time is expensive. Diffguard runs cheap heuristics on `git diff` so 
 - Unresolved merge conflict markers (`<<<<<<<` / `>>>>>>>`)
 - Debug leftovers (`debugger`, `console.log`, `pdb.set_trace`, …)
 - Focused tests (`.only`, `fit`, `fdescribe`) left in test files
+- TypeScript suppressions (`@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`) in added lines
 - Lockfile churn without a manifest change
 - Optional LLM / agent second pass for narrative review and extra findings
 
