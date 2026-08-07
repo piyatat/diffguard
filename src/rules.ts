@@ -276,6 +276,33 @@ function rules(): Rule[] {
       },
     },
     {
+      id: 'focused-tests',
+      severity: 'high',
+      title: 'Focused test left in diff',
+      score: 22,
+      test(files) {
+        const hits: string[] = []
+        const cue =
+          /\b(describe|it|test|context)\.only\b|\b(fdescribe|fit)\s*\(/
+        for (const f of files) {
+          if (!TEST_FILE_RE.test(f.path) && !TEST_RE.test(f.path)) continue
+          if (!f.patch) continue
+          const added = f.patch
+            .split('\n')
+            .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+            .join('\n')
+          if (cue.test(added)) hits.push(f.path)
+        }
+        if (!hits.length) return { hit: false, files: [], detail: '' }
+        return {
+          hit: true,
+          files: hits,
+          detail:
+            'Added lines contain .only / fit / fdescribe — CI may run a subset of tests only.',
+        }
+      },
+    },
+    {
       id: 'config-bypass',
       severity: 'high',
       title: 'Security config relaxed',
