@@ -8,6 +8,20 @@ type Rule = {
   test: (files: FileChange[]) => { hit: boolean; files: string[]; detail: string }
 }
 
+/** Stable catalog entry for `--list-rules` / docs (same ids as findings). */
+export type RuleMeta = {
+  id: string
+  severity: Severity
+  title: string
+  /** Base score; some rules (e.g. hotspot-paths, large-diff) may escalate at runtime. */
+  score: number
+}
+
+/** Heuristic rule catalog from the same definitions `runRules` uses. */
+export function listRules(): RuleMeta[] {
+  return rules().map(({ id, severity, title, score }) => ({ id, severity, title, score }))
+}
+
 const HOTSPOT_PATTERNS: { re: RegExp; label: string; severity: Severity; score: number }[] = [
   { re: /(^|\/)(\.github\/workflows|Dockerfile|docker-compose)/i, label: 'CI / container config', severity: 'high', score: 18 },
   { re: /(^|\/)(auth|oauth|sso|session|jwt|passport|rbac)(\/|\.|$)/i, label: 'auth / identity', severity: 'critical', score: 28 },

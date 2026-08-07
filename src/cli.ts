@@ -7,6 +7,7 @@ import { analyze, maxSeverity } from './analyze.js'
 import { collectChanges } from './diff.js'
 import { getHead, isGitRepo, resolveBase } from './git.js'
 import { formatJson, formatText } from './report.js'
+import { listRules } from './rules.js'
 import type { Severity } from './types.js'
 
 type Args = {
@@ -18,6 +19,7 @@ type Args = {
   failOn: Severity | null
   help: boolean
   version: boolean
+  listRules: boolean
   ai: boolean
   aiProvider?: string
   aiModel?: string
@@ -75,6 +77,7 @@ function parseArgs(argv: string[]): Args {
     failOn: null,
     help: false,
     version: false,
+    listRules: false,
     ai: false,
     aiPrompt: false,
   }
@@ -83,6 +86,7 @@ function parseArgs(argv: string[]): Args {
     const a = argv[i]!
     if (a === '--help' || a === '-h') args.help = true
     else if (a === '--version' || a === '-V') args.version = true
+    else if (a === '--list-rules') args.listRules = true
     else if (a === '--json') args.json = true
     else if (a === '--color') args.color = true
     else if (a === '--no-color') args.color = false
@@ -148,6 +152,7 @@ Options:
       --ai-model <name>   Model id (default: llama3.2 / gpt-4o-mini)
       --ai-base-url <url> Override endpoint (Ollama, LM Studio, OpenAI, …)
       --ai-prompt         Print a redacted agent prompt (no API call)
+      --list-rules        Print heuristic rule id / severity / title / score
   -V, --version           Print version and exit
   -h, --help              Show this help
 
@@ -212,6 +217,23 @@ async function main(): Promise<void> {
 
   if (args.version) {
     console.log(`diffguard ${packageVersion()}`)
+    return
+  }
+
+  if (args.listRules) {
+    const catalog = listRules()
+    if (args.json) {
+      console.log(JSON.stringify({ rules: catalog }, null, 2))
+    } else {
+      const idW = Math.max(2, ...catalog.map((r) => r.id.length))
+      const sevW = Math.max(8, ...catalog.map((r) => r.severity.length))
+      for (const r of catalog) {
+        const score = String(r.score).padStart(2, ' ')
+        console.log(
+          `${r.id.padEnd(idW)}  ${r.severity.padEnd(sevW)}  +${score}  ${r.title}`,
+        )
+      }
+    }
     return
   }
 

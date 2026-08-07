@@ -154,6 +154,7 @@ Exit codes: `0` ok · `1` failed severity gate · `2` usage / git error.
 | `--ai-model` | Model id |
 | `--ai-base-url` | Endpoint base URL |
 | `--ai-prompt` | Print redacted agent prompt only |
+| `--list-rules` | Print heuristic rule id / severity / title / base score (JSON with `--json`) |
 | `-V, --version` | Print version and exit |
 | `-h, --help` | Help |
 
@@ -211,7 +212,7 @@ No. Heuristics use local `git` only. Network happens only if you opt into `--ai`
 Default scan is committed range vs `--base`. Add `--unstaged` when you also want dirty and untracked paths in the working tree surfaced before you commit.
 
 **Where are heuristic categories documented?**  
-See [docs/findings-glossary.md](docs/findings-glossary.md) for human labels (secrets, auth/payments paths, lockfile churn, safety bypasses, missing tests, oversized diffs).
+See [docs/findings-glossary.md](docs/findings-glossary.md) for human labels (secrets, auth/payments paths, lockfile churn, safety bypasses, missing tests, oversized diffs). Print live rule ids with `diffguard --list-rules` (add `--json` for tooling).
 
 More CI copy-paste recipes: [docs/ci-recipes.md](docs/ci-recipes.md).
 

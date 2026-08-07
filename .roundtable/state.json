@@ -1,0 +1,9 @@
+{
+  "phase": "implement",
+  "round": 2,
+  "maxRounds": 2,
+  "seats": ["product", "craft", "experience", "reliability"],
+  "project": "/Users/piyatat/Documents/Workspace/diffguard",
+  "consensusIdea": "--list-rules",
+  "goal": "Implement --list-rules catalog from rules.ts; document; build."
+}

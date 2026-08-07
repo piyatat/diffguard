@@ -1,17 +1,17 @@
 # Findings glossary
 
-Human labels for Diffguard **heuristic** categories. Exact rule ids may evolve; treat this as product language for reports and CI triage.
+Human labels for Diffguard **heuristic** categories. Live ids come from `diffguard --list-rules` (same source as the scanner). Treat this table as product language for reports and CI triage.
 
-| Category | What it usually means | Typical severity |
-| --- | --- | --- |
-| Secret-shaped strings | Assignment/literals in **added** lines that look like keys/tokens (values redacted in output) | critical / high |
-| Auth / session paths | Touches auth, session, OAuth, permission gates | high / medium |
-| Payments / billing | Checkout, stripe, wallet, invoice money paths | high / medium |
-| Migrations / schema | DB migrations without clear down/rollback story | high / medium |
-| CI / release config | Workflows, deploy manifests, branch protection-ish files | medium |
-| Missing tests | Source changed without nearby test updates; deleted tests | medium / high |
-| Oversized diff | Very large file or hunk count — consider splitting the PR | medium / low |
-| Safety bypasses | `CORS *`, `eslint-disable`, TLS verify off, dangerous flags | high / medium |
-| Lockfile churn | Lockfile changed without manifest (or vice versa) | medium / low |
+| Rule id | Category | What it usually means | Typical severity |
+| --- | --- | --- | --- |
+| `hotspot-paths` | Auth / payments / CI / infra paths | Touches auth, session, OAuth, payments, migrations, secrets, workflows, etc. (severity escalates by path) | critical / high / medium |
+| `missing-tests` | Missing tests | Source changed without nearby test updates | medium |
+| `deleted-tests` | Deleted tests | Test paths removed in the diff | high |
+| `large-diff` | Oversized diff | Very large file or hunk count — consider splitting the PR (may escalate to high) | medium / high |
+| `mega-file-churn` | Single-file mega churn | One file with huge +/− line churn | medium |
+| `lockfile-only-skew` | Lockfile churn | Lockfile changed without `package.json` (light signal — not a lockfile changelog) | low |
+| `secret-patterns` | Secret-shaped strings | Assignment/literals in **added** lines that look like keys/tokens (values redacted in output) | critical |
+| `todo-fix` | TODO / FIXME | New TODO/FIXME/HACK/XXX markers in added lines | low |
+| `config-bypass` | Safety bypasses | `CORS *`, `eslint-disable`, TLS verify off, dangerous flags in added lines | high |
 
 AI findings (with `--ai`) are tagged separately and may confirm, refute, or extend heuristics. `--fail-on` still keys off **severity**, not letter grade.
