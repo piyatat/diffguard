@@ -13,6 +13,7 @@ Human labels for Diffguard **heuristic** categories. Live ids come from `diffgua
 | `secret-patterns` | Secret-shaped strings | Assignment/literals in **added** lines that look like keys/tokens (values redacted in output) | critical |
 | `todo-fix` | TODO / FIXME | New TODO/FIXME/HACK/XXX markers in added lines | low |
 | `conflict-markers` | Unresolved conflict markers | `<<<<<<<` / `>>>>>>>` in added lines | high |
+| `debug-leftovers` | Debug leftovers | `debugger`, `console.log`/`console.debug`, `pdb.set_trace`/`breakpoint()`, `binding.pry` in added lines | medium |
 | `config-bypass` | Safety bypasses | `CORS *`, `eslint-disable`, TLS verify off, dangerous flags in added lines | high |
 
 AI findings (with `--ai`) are tagged separately and may confirm, refute, or extend heuristics. `--fail-on` still keys off **severity**, not letter grade.

@@ -16,6 +16,7 @@ Code review time is expensive. Diffguard runs cheap heuristics on `git diff` so 
 - Secret-shaped strings in **added** lines (values never printed)
 - Common safety bypasses (`CORS *`, `eslint-disable`, TLS verify off, …)
 - Unresolved merge conflict markers (`<<<<<<<` / `>>>>>>>`)
+- Debug leftovers (`debugger`, `console.log`, `pdb.set_trace`, …)
 - Lockfile churn without a manifest change
 - Optional LLM / agent second pass for narrative review and extra findings
 

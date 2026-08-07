@@ -251,6 +251,31 @@ function rules(): Rule[] {
       },
     },
     {
+      id: 'debug-leftovers',
+      severity: 'medium',
+      title: 'Debug leftovers in diff',
+      score: 10,
+      test(files) {
+        const hits: string[] = []
+        const cue =
+          /\bdebugger\b|\bconsole\.(log|debug)\s*\(|\bpdb\.set_trace\s*\(|\bbreakpoint\s*\(|\bbinding\.pry\b/
+        for (const f of files) {
+          if (!f.patch) continue
+          const added = f.patch
+            .split('\n')
+            .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+            .join('\n')
+          if (cue.test(added)) hits.push(f.path)
+        }
+        if (!hits.length) return { hit: false, files: [], detail: '' }
+        return {
+          hit: true,
+          files: hits,
+          detail: 'New debugger/console.log/pdb leftovers in added lines.',
+        }
+      },
+    },
+    {
       id: 'config-bypass',
       severity: 'high',
       title: 'Security config relaxed',
