@@ -6,7 +6,7 @@ import { enrichWithAi, exportAgentPrompt } from './ai/review.js'
 import { analyze, maxSeverity } from './analyze.js'
 import { collectChanges } from './diff.js'
 import { getHead, isGitRepo, resolveBase } from './git.js'
-import { formatJson, formatText } from './report.js'
+import { formatJson, formatSummary, formatText } from './report.js'
 import { listRules } from './rules.js'
 import type { Severity } from './types.js'
 
@@ -14,6 +14,7 @@ type Args = {
   base?: string
   cwd: string
   json: boolean
+  summary: boolean
   color: boolean
   unstaged: boolean
   failOn: Severity | null
@@ -72,6 +73,7 @@ function parseArgs(argv: string[]): Args {
   const args: Args = {
     cwd: process.cwd(),
     json: false,
+    summary: false,
     color: defaultColor(),
     unstaged: false,
     failOn: null,
@@ -88,6 +90,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--version' || a === '-V') args.version = true
     else if (a === '--list-rules') args.listRules = true
     else if (a === '--json') args.json = true
+    else if (a === '--summary' || a === '-s') args.summary = true
     else if (a === '--color') args.color = true
     else if (a === '--no-color') args.color = false
     else if (a === '--unstaged') args.unstaged = true
@@ -141,6 +144,7 @@ Options:
                           Empty values are rejected (exit 2)
       --cwd <path>        Repository path (default: cwd; empty rejected)
       --json              Machine-readable output (CI / scripts)
+  -s, --summary           One-line grade / score / finding tally (CI logs)
       --fail-on <sev>     Exit 1 if any finding >= severity
                           Values: low | medium | high | critical
                           Order: info < low < medium < high < critical
@@ -176,6 +180,9 @@ Examples:
 
   # CI gate against origin/main
   diffguard --base origin/main --fail-on high --no-color
+
+  # One-line summary for logs
+  diffguard --summary --no-color
 
   # JSON for pipelines
   diffguard --json > report.json
@@ -285,6 +292,7 @@ async function main(): Promise<void> {
   }
 
   if (args.json) console.log(formatJson(result))
+  else if (args.summary) console.log(formatSummary(result))
   else console.log(formatText(result, args.color))
 
   const max = maxSeverity(result.findings)

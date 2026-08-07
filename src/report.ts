@@ -167,3 +167,13 @@ export function formatJson(analysis: Analysis): string {
     2,
   )
 }
+
+/** One-line grade for CI logs / scripts (`--summary`). */
+export function formatSummary(analysis: Analysis): string {
+  const max = analysis.findings.reduce<Severity | null>((acc, f) => {
+    if (!acc) return f.severity
+    return SEVERITY_ORDER.indexOf(f.severity) < SEVERITY_ORDER.indexOf(acc) ? f.severity : acc
+  }, null)
+  const top = max ?? 'none'
+  return `diffguard ${analysis.grade} ${analysis.score}/100 · ${analysis.files.length} file(s) · ${analysis.findings.length} finding(s) · max ${top} · ${analysis.base}...${analysis.head}`
+}

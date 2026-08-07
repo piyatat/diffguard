@@ -34,6 +34,7 @@ npm link
 cd your-project
 diffguard
 diffguard --base origin/main --fail-on high
+diffguard --summary --no-color
 diffguard --json > report.json
 ```
 
@@ -145,6 +146,7 @@ Exit codes: `0` ok · `1` failed severity gate · `2` usage / git error.
 | `-b, --base <ref>` | Diff base (default: `origin/main`, then `main` / `master`) |
 | `--cwd <path>` | Repo path |
 | `--json` | JSON report for tooling |
+| `-s, --summary` | One-line grade / score / finding tally (handy for CI logs) |
 | `--fail-on <sev>` | `low` \| `medium` \| `high` \| `critical` |
 | `--unstaged` | Also surface dirty/untracked paths |
 | `--color` | Force ANSI colors (overrides `NO_COLOR`) |
