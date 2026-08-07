@@ -12,6 +12,7 @@ Human labels for Diffguard **heuristic** categories. Live ids come from `diffgua
 | `lockfile-only-skew` | Lockfile churn | Lockfile changed without `package.json` (light signal — not a lockfile changelog) | low |
 | `secret-patterns` | Secret-shaped strings | Assignment/literals in **added** lines that look like keys/tokens (values redacted in output) | critical |
 | `todo-fix` | TODO / FIXME | New TODO/FIXME/HACK/XXX markers in added lines | low |
+| `conflict-markers` | Unresolved conflict markers | `<<<<<<<` / `>>>>>>>` in added lines | high |
 | `config-bypass` | Safety bypasses | `CORS *`, `eslint-disable`, TLS verify off, dangerous flags in added lines | high |
 
 AI findings (with `--ai`) are tagged separately and may confirm, refute, or extend heuristics. `--fail-on` still keys off **severity**, not letter grade.

@@ -225,6 +225,32 @@ function rules(): Rule[] {
       },
     },
     {
+      id: 'conflict-markers',
+      severity: 'high',
+      title: 'Unresolved merge conflict markers',
+      score: 24,
+      test(files) {
+        const hits: string[] = []
+        // Avoid bare ======= (markdown separators). Require <<<<<<< or >>>>>>>.
+        const marker = /^(<<<<<<<|>>>>>>>)/
+        for (const f of files) {
+          if (!f.patch) continue
+          const added = f.patch
+            .split('\n')
+            .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+            .map((l) => l.slice(1))
+          if (added.some((l) => marker.test(l))) hits.push(f.path)
+        }
+        if (!hits.length) return { hit: false, files: [], detail: '' }
+        return {
+          hit: true,
+          files: hits,
+          detail:
+            'Added lines contain git conflict markers (<<<<<<< / >>>>>>>). Resolve before merge.',
+        }
+      },
+    },
+    {
       id: 'config-bypass',
       severity: 'high',
       title: 'Security config relaxed',

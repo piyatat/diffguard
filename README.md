@@ -15,6 +15,7 @@ Code review time is expensive. Diffguard runs cheap heuristics on `git diff` so 
 - Oversized diffs that should be split
 - Secret-shaped strings in **added** lines (values never printed)
 - Common safety bypasses (`CORS *`, `eslint-disable`, TLS verify off, …)
+- Unresolved merge conflict markers (`<<<<<<<` / `>>>>>>>`)
 - Lockfile churn without a manifest change
 - Optional LLM / agent second pass for narrative review and extra findings
 
